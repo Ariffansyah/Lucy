@@ -1,0 +1,55 @@
+# Go binaries
+/bin/
+/obj/
+
+# Vendor directory
+/vendor/
+
+# Go workspace files
+*.test
+*.out
+
+# Go module cache
+.goenv/
+*.mod
+*.sum
+*.lock
+
+# IDE or Editor specific files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.iml
+
+# Operating system files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Coverage files
+*.cov
+
+# Dotenv files
+.env
+.env.local
+
+# Other
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.a
+*.o
+*.out
+*.prof
+
+Lucy
