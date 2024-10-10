@@ -184,6 +184,9 @@ func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate
 	}
 }
 
+var channelMembers = make(map[string]map[string]bool)
+var activeChannel = make(map[string]bool)
+
 func JoinToCreate(db *sql.DB, s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 	rows, err := db.Query("SELECT channel_id FROM channel")
 	if err != nil {
@@ -237,17 +240,49 @@ func JoinToCreate(db *sql.DB, s *discordgo.Session, vs *discordgo.VoiceStateUpda
 			return
 		}
 	}
+	if vs.ChannelID != "" {
+		// Ensure the channel has an entry in the map
+		if channelMembers[vs.ChannelID] == nil {
+			channelMembers[vs.ChannelID] = make(map[string]bool)
+		}
 
-	// Check if the user has left a newly created channel
-	if channelID, ok := activeChannels[vs.UserID]; ok {
-		if vs.ChannelID != channelID {
-			// delete the channel
-			_, err := s.ChannelDelete(channelID)
-			if err != nil {
-				fmt.Printf("Error deleting channel %s: %v\n", channelID, err)
-				return
+		// Add the user to the channel's member list
+		channelMembers[vs.ChannelID][vs.UserID] = true
+		memberCount := len(channelMembers[vs.ChannelID])
+
+		log.Printf("User %s joined channel %s", vs.UserID, vs.ChannelID)
+		log.Printf("Channel %s now has %d member(s)", vs.ChannelID, memberCount)
+
+		// Mark the channel as active if it's the first member
+		if memberCount == 1 {
+			activeChannel[vs.ChannelID] = true
+		}
+
+	} else if vs.ChannelID == "" { // User leaves the channel
+		for channelID, members := range channelMembers {
+			// Check if the user was in this channel
+			if members[vs.UserID] {
+				// Remove the user from the channel's member list
+				delete(channelMembers[channelID], vs.UserID)
+				memberCount := len(channelMembers[channelID])
+
+				log.Printf("User %s left channel %s", vs.UserID, channelID)
+				log.Printf("Channel %s now has %d member(s)", channelID, memberCount)
+
+				// If no members remain, delete the channel
+				if memberCount == 0 {
+					log.Printf("No members in the channel %s, deleting it", channelID)
+					_, err := s.ChannelDelete(channelID)
+					if err != nil {
+						fmt.Printf("Error deleting channel %s: %v\n", channelID, err)
+						return
+					}
+					fmt.Printf("Channel %s deleted\n", channelID)
+					delete(channelMembers, channelID) // Remove from the tracking map
+					delete(activeChannels, channelID) // Remove from activeChannels
+				}
+				break
 			}
-			fmt.Printf("Channel %s deleted\n", channelID)
 		}
 	}
 }
