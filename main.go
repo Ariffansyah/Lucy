@@ -233,6 +233,30 @@ func JoinToCreate(db *sql.DB, s *discordgo.Session, vs *discordgo.VoiceStateUpda
 		channelIDs = append(channelIDs, channelID)
 	}
 
+	// Detect when a user moves between channels
+	// If `vs.BeforeUpdate.ChannelID` is not empty, the user has moved from another channel
+	if vs.BeforeUpdate != nil && vs.BeforeUpdate.ChannelID != "" {
+		previousChannelID := vs.BeforeUpdate.ChannelID
+		// Remove the user from the previous channel's member list
+		if channelMembers[previousChannelID] != nil {
+			delete(channelMembers[previousChannelID], vs.UserID)
+			memberCount := len(channelMembers[previousChannelID])
+
+			// Check if the previous channel is dynamically created and empty
+			if memberCount == 0 && activeChannel[previousChannelID] {
+				log.Printf("No members in the dynamically created channel %s, deleting it", previousChannelID)
+				_, err := s.ChannelDelete(previousChannelID)
+				if err != nil {
+					fmt.Printf("Error deleting channel %s: %v\n", previousChannelID, err)
+					return
+				}
+				fmt.Printf("Dynamically created channel %s deleted\n", previousChannelID)
+				delete(channelMembers, previousChannelID)
+				delete(activeChannels, previousChannelID)
+			}
+		}
+	}
+
 	// Check if the user has joined one of the monitored channels
 	for _, channelID := range channelIDs {
 		if vs.ChannelID == channelID {
@@ -260,13 +284,15 @@ func JoinToCreate(db *sql.DB, s *discordgo.Session, vs *discordgo.VoiceStateUpda
 				return
 			}
 
-			// Store the created channel ID so it can be deleted later
-			activeChannels[vs.UserID] = newChannel.ID
+			// Track the dynamically created channel
+			activeChannel[newChannel.ID] = true
 			fmt.Printf("User %s moved to their own channel %s\n", vs.UserID, newChannel.ID)
 
 			return
 		}
 	}
+
+	// Handle user joining a channel
 	if vs.ChannelID != "" {
 		// Ensure the channel has an entry in the map
 		if channelMembers[vs.ChannelID] == nil {
@@ -279,13 +305,7 @@ func JoinToCreate(db *sql.DB, s *discordgo.Session, vs *discordgo.VoiceStateUpda
 
 		log.Printf("User %s joined channel %s", vs.UserID, vs.ChannelID)
 		log.Printf("Channel %s now has %d member(s)", vs.ChannelID, memberCount)
-
-		// Mark the channel as active if it's the first member
-		if memberCount == 1 {
-			activeChannel[vs.ChannelID] = true
-		}
-
-	} else if vs.ChannelID == "" { // User leaves the channel
+	} else if vs.ChannelID == "" { // User leaves the channel completely
 		for channelID, members := range channelMembers {
 			// Check if the user was in this channel
 			if members[vs.UserID] {
@@ -296,22 +316,32 @@ func JoinToCreate(db *sql.DB, s *discordgo.Session, vs *discordgo.VoiceStateUpda
 				log.Printf("User %s left channel %s", vs.UserID, channelID)
 				log.Printf("Channel %s now has %d member(s)", channelID, memberCount)
 
-				// If no members remain, delete the channel
-				if memberCount == 0 {
-					log.Printf("No members in the channel %s, deleting it", channelID)
+				// If no members remain and the channel was dynamically created, delete the channel
+				if memberCount == 0 && activeChannel[channelID] {
+					log.Printf("No members in the dynamically created channel %s, deleting it", channelID)
 					_, err := s.ChannelDelete(channelID)
 					if err != nil {
 						fmt.Printf("Error deleting channel %s: %v\n", channelID, err)
 						return
 					}
-					fmt.Printf("Channel %s deleted\n", channelID)
-					delete(channelMembers, channelID) // Remove from the tracking map
-					delete(activeChannels, channelID) // Remove from activeChannels
+					fmt.Printf("Dynamically created channel %s deleted\n", channelID)
+					delete(channelMembers, channelID)
+					delete(activeChannels, channelID)
 				}
 				break
 			}
 		}
 	}
+}
+
+// Helper function to check if the channel was dynamically created
+func isDynamicallyCreated(channelID string) bool {
+	for _, createdChannelID := range activeChannels {
+		if createdChannelID == channelID {
+			return true
+		}
+	}
+	return false
 }
 
 func RegisterCommands(s *discordgo.Session) {
