@@ -8,8 +8,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
+	"github.com/mattn/go-sqlite3"
 	_ "github.com/mattn/go-sqlite3"
-	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
 var activeChannels = make(map[string]string)
