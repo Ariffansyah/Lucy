@@ -9,12 +9,6 @@
 *.test
 *.out
 
-# Go module cache
-.goenv/
-*.mod
-*.sum
-*.lock
-
 # IDE or Editor specific files
 .vscode/
 .idea/
