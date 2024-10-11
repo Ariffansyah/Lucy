@@ -85,6 +85,7 @@ func getChannelByID(s *discordgo.Session, channelID string) (*discordgo.Channel,
 
 func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate) {
 
+	// Fetch the member to check their permissions
 	_, err := s.GuildMember(i.GuildID, i.Member.User.ID)
 	if err != nil {
 		log.Printf("Error fetching member details: %v", err)
@@ -132,19 +133,18 @@ func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate
 
 	// Safely access the string values from the options
 	messageSet := messageOptionsSet.StringValue() // Use StringValue() for the first option
-	messageID := messageOptionsID.StringValue()   // Corrected to access the first option Ensure the database connection is closed
+	messageID := messageOptionsID.StringValue()   // Corrected to access the first option
 
-	// Create the channel table if it doesn't exist
-
+	// Perform the action based on the messageSet value ("set" or "unset")
 	switch messageSet {
 	case "set":
-		channel, err := getChannelByID(s, messageID)
-
+		// Get channel details by ID
+		channel, err := s.Channel(messageID)
 		if err != nil {
 			response := &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: fmt.Sprintf("Channel ID %s does not exist.", messageID),
+					Content: fmt.Sprintf("Channel ID %s does not exist in this server.", messageID),
 				},
 			}
 			if err := s.InteractionRespond(i.Interaction, response); err != nil {
@@ -153,6 +153,21 @@ func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate
 			return
 		}
 
+		// Ensure the channel is from the same guild as the one where the command is issued
+		if channel.GuildID != i.GuildID {
+			response := &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "You can only set channels from the same server.",
+				},
+			}
+			if err := s.InteractionRespond(i.Interaction, response); err != nil {
+				fmt.Println("Error responding to /jtc command:", err)
+			}
+			return
+		}
+
+		// Ensure the channel is a voice channel
 		if channel.Type != discordgo.ChannelTypeGuildVoice {
 			response := &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -166,6 +181,7 @@ func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate
 			return
 		}
 
+		// Save the channel ID to the database
 		saveChannelID(db, messageID)
 		response := &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -177,20 +193,36 @@ func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate
 			fmt.Println("Error responding to /jtc command:", err)
 		}
 	case "unset":
-		_, err := getChannelByID(s, messageID)
-
-		if err != nil {
+		// Check if the channel exists in the same guild
+		channel, err := s.Channel(messageID)
+		if err != nil || channel.GuildID != i.GuildID {
 			response := &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: fmt.Sprintf("Channel ID %s does not exist.", messageID),
+					Content: fmt.Sprintf("Channel ID %s does not exist in this server.", messageID),
 				},
 			}
 			if err := s.InteractionRespond(i.Interaction, response); err != nil {
 				fmt.Println("Error responding to /jtc command:", err)
 			}
+			return
 		}
 
+		// Ensure the channel is from the same guild as the one where the command is issued
+		if channel.GuildID != i.GuildID {
+			response := &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: "You can only unset channels from the same server.",
+				},
+			}
+			if err := s.InteractionRespond(i.Interaction, response); err != nil {
+				fmt.Println("Error responding to /jtc command:", err)
+			}
+			return
+		}
+
+		// Delete the channel ID from the database
 		deleteChannelID(db, messageID)
 		response := &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -202,6 +234,7 @@ func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate
 			fmt.Println("Error responding to /jtc command:", err)
 		}
 	default:
+		// Handle invalid options
 		response := &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
