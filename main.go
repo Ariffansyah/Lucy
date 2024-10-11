@@ -84,6 +84,34 @@ func getChannelByID(s *discordgo.Session, channelID string) (*discordgo.Channel,
 }
 
 func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate) {
+
+	_, err := s.GuildMember(i.GuildID, i.Member.User.ID)
+	if err != nil {
+		log.Printf("Error fetching member details: %v", err)
+		return
+	}
+
+	// Get the permissions of the member in the current guild and check for administrator rights
+	userPermissions, err := s.UserChannelPermissions(i.Member.User.ID, i.ChannelID)
+	if err != nil {
+		log.Printf("Error fetching permissions: %v", err)
+		return
+	}
+
+	if userPermissions&discordgo.PermissionAdministrator == 0 {
+		// User is not an administrator
+		response := &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "You do not have permission to use this command. Admins only.",
+			},
+		}
+		if err := s.InteractionRespond(i.Interaction, response); err != nil {
+			fmt.Println("Error responding to /jtc command:", err)
+		}
+		return
+	}
+
 	commandData := i.ApplicationCommandData()
 
 	// Check if there are enough options
