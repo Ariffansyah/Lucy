@@ -13,6 +13,8 @@ import (
 )
 
 var activeChannels = make(map[string]string)
+var channelMembers = make(map[string]map[string]bool)
+var activeChannel = make(map[string]bool)
 
 func CommandHandler(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	// Ensure we are working with the right type
@@ -127,7 +129,7 @@ func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate
 			response := &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "This command can only be used in voice channels.",
+					Content: "This command can only be used for voice channels.",
 				},
 			}
 			if err := s.InteractionRespond(i.Interaction, response); err != nil {
@@ -183,9 +185,6 @@ func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate
 		}
 	}
 }
-
-var channelMembers = make(map[string]map[string]bool)
-var activeChannel = make(map[string]bool)
 
 func JoinToCreate(db *sql.DB, s *discordgo.Session, vs *discordgo.VoiceStateUpdate) {
 	rows, err := db.Query("SELECT channel_id FROM channel")
