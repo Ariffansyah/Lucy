@@ -213,7 +213,7 @@ func jtcCommand(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate
 			response := &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "You can only unset channels from the same server.",
+					Content: "You can only set channels from the same server.",
 				},
 			}
 			if err := s.InteractionRespond(i.Interaction, response); err != nil {
