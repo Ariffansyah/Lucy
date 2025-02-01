@@ -18,6 +18,8 @@ func CommandHandler(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCr
 	// Ensure we are working with the right type
 	if i.Type == discordgo.InteractionApplicationCommand {
 		switch i.ApplicationCommandData().Name {
+		case "help":
+			cmd.RunHelp(s, i)
 		case "ping":
 			cmd.RunPing(s, i)
 		case "jtc":
@@ -33,6 +35,10 @@ func RegisterCommands(s *discordgo.Session) {
 		{
 			Name:        "ping",
 			Description: "Replies with a ping!",
+		},
+		{
+			Name:        "help",
+			Description: "Get help with commands.",
 		},
 		{
 			Name:        "jtc",

@@ -1,6 +1,7 @@
 package run
 
 import (
+	"Lucy/pkg/help"
 	"Lucy/pkg/jtc"
 	"Lucy/pkg/ping"
 
@@ -14,4 +15,8 @@ func RunPing(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 func RunJTC(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	jtcCommand.GetJTC(db, s, i)
+}
+
+func RunHelp(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	help.GetHelp(s, i)
 }
