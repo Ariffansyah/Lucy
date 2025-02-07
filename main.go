@@ -15,7 +15,6 @@ import (
 )
 
 func CommandHandler(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate) {
-	// Ensure we are working with the right type
 	if i.Type == discordgo.InteractionApplicationCommand {
 		switch i.ApplicationCommandData().Name {
 		case "help":

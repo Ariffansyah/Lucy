@@ -99,8 +99,8 @@ func GetJTC(db *sql.DB, s *discordgo.Session, i *discordgo.InteractionCreate) {
 	messageOptionsID := commandData.Options[1]
 
 	// Safely access the string values from the options
-	messageSet := messageOptionsSet.StringValue() // Use StringValue() for the first option
-	messageID := messageOptionsID.StringValue()   // Corrected to access the first option
+	messageSet := messageOptionsSet.StringValue()
+	messageID := messageOptionsID.StringValue()
 
 	// Perform the action based on the messageSet value ("set" or "unset")
 	switch messageSet {
