@@ -64,5 +64,3 @@ Contributions are welcome! Please feel free to open issues or submit pull reques
 This project is for educational purposes. No specific license is provided.
 
 ---
-
-Let me know if you’d like to add more details, such as screenshots, usage examples, or links to additional resources!
