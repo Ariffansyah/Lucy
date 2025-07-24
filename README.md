@@ -60,7 +60,6 @@ Contributions are welcome! Please feel free to open issues or submit pull reques
 ---
 
 ## License
-
-This project is for educational purposes. No specific license is provided.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
